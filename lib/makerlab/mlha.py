@@ -16,7 +16,8 @@ import json
 import ubinascii
 import network
 from umqtt.robust2 import MQTTClient
-from machine import Timer
+import machine
+from machine import Timer, Pin
 import time
 
 class MLHA:
@@ -60,6 +61,9 @@ class MLHA:
         self.watchdog = Timer()
         self.watchdog.init(period=2500, mode=Timer.PERIODIC, callback=self.watchdog_cb)
         print("ML HA Initialized")
+    
+    def toggle_led(self, t):
+        self.led.toggle()
 
     def connectWifi(self):
         # STA_IF = station interface, AP_IF = Access Point interface
@@ -70,7 +74,7 @@ class MLHA:
         max_wait = 30
         # Checking Wi-Fi before continuing
         tim = Timer()
-        tim.init(freq=3, mode=Timer.PERIODIC, callback=self.led.toggle)
+        tim.init(freq=3, mode=Timer.PERIODIC, callback=self.toggle_led)
         while self.wlan.status() != 3:
             print("Waiting, wlan status " + str(self.wlan.status()))
             max_wait -= 1
@@ -121,8 +125,11 @@ class MLHA:
     def set_callback(self, callback):
         self.mqtt_callback = callback
     
-    def subscribe(self, topic):
-        self.mqtt.subscribe(b""+self.pico_id + "/" + topic)
+    def subscribe(self, topic, absolute=False):
+        if absolute:
+            self.mqtt.subscribe(topic)
+        else:
+            self.mqtt.subscribe(self.pico_id + "/" + topic)
 
     def publish(self, topic, msg, retain=False):
         self.mqtt.publish(b""+self.pico_id + "/" + topic, msg, retain)
