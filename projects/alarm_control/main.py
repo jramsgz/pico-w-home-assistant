@@ -102,9 +102,9 @@ print("Publishing config to Homeassistant")
 setup_config() # Publishes the config for Homeassistant
 
 print("Starting values read and publish timer")
-# Send ping to broker every 5 minutes
+# Send ping to broker every 2 minutes
 send_tim = Timer()
-send_tim.init(period=300000, mode=Timer.PERIODIC, callback=lambda t:mlha.publish_status(parse_message()))
+send_tim.init(period=120000, mode=Timer.PERIODIC, callback=lambda t:mlha.publish_status(parse_message()))
 mlha.publish_status(parse_message())
 print("Initialization complete, free memory: " + str(gc.mem_free()))
 print("Ready to send/receive data")
@@ -114,7 +114,7 @@ mlha.publish("system/status", "online", retain=True)
 while True:
     try:
         mlha.check_mqtt_msg()
-        time.sleep_ms(500)
+        time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))
         machine.reset()

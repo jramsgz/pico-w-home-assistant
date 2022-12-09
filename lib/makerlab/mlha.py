@@ -98,6 +98,7 @@ class MLHA:
             self.error_count += 1
             self.mqtt.disconnect()
             self.mqtt.reconnect()
+            self.mqtt.resubscribe()
         else:
             self.error_count = 0
 
