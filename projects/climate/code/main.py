@@ -130,23 +130,26 @@ def parse_message():
 
 
 def read_and_publish(timer):
+    mlha.update_temp_sensor()
     getTemperature()
     mlha.publish_status(parse_message())
 
 # Publishes the config for the sensors to Homeassistant
 def setup_config():
-    mlha.publish_config("caldera_temp", "Temperatura de la Caldera", "sensor", "temperature", "C", "measurement")
-    mlha.publish_config("casa_temp", "Temperatura de Casa", "sensor", "temperature", "C", "measurement")
-    mlha.publish_config("exterior_temp", "Temperatura Exterior", "sensor", "temperature", "C", "measurement")
-    mlha.publish_config("deposito_temp", "Temperatura del Deposito", "sensor", "temperature", "C", "measurement")
-    mlha.publish_config("caldera_status", "Estado de la caldera", "switch", None, None, None)
-    mlha.publish_config("acs_status", "Estado del ACS", "switch", None, None, None)
-    mlha.publish_config("primerod_status", "Estado del Primero D", "switch", None, None, None)
-    mlha.publish_config("mltemp_connection", "MLTemp Connection", "binary_sensor", "connectivity", None, None)
+    mlha.publish_config("caldera_temp", "Temperatura de la Caldera", "sensor", "temperature", "C", "measurement", expire_after = 60)
+    mlha.publish_config("casa_temp", "Temperatura de Casa", "sensor", "temperature", "C", "measurement", expire_after = 60)
+    mlha.publish_config("exterior_temp", "Temperatura Exterior", "sensor", "temperature", "C", "measurement", expire_after = 60)
+    mlha.publish_config("deposito_temp", "Temperatura del Deposito", "sensor", "temperature", "C", "measurement", expire_after = 60)
+    mlha.publish_config("caldera_status", "Estado de la caldera", "switch", expire_after = 60)
+    mlha.publish_config("acs_status", "Estado del ACS", "switch", expire_after = 60)
+    mlha.publish_config("primerod_status", "Estado del Primero D", "switch", expire_after = 60)
+    mlha.publish_config("mltemp_connection", "MLTemp Connection", "binary_sensor", "connectivity", expire_after = 60)
 
 # Main =============================================
 # Initialize main component (WiFi, MQTT and HomeAssistant)
 mlha = MLHA(wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password)
+mlha.set_device_name("MLCasaClimate")
+mlha.set_enable_temp_sensor(True)
 
 # Initialise temperature sensors
 print("Initializing temperature sensors")
@@ -176,9 +179,9 @@ print("Publishing config to Homeassistant")
 setup_config() # Publishes the config for Homeassistant
 
 print("Starting values read and publish timer")
-# Send data to broker every 10 seconds
+# Send data to broker every 30 seconds
 send_tim = Timer()
-send_tim.init(period=10000, mode=Timer.PERIODIC, callback=read_and_publish)
+send_tim.init(period=30000, mode=Timer.PERIODIC, callback=read_and_publish)
 print("Initialization complete, free memory: " + str(gc.mem_free()))
 print("Ready to send/receive data")
 mlha.publish("system/status", "online", retain=True)

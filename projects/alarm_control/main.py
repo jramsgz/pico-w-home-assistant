@@ -64,8 +64,8 @@ def parse_message(is_pressed=False):
 
 # Publishes the config for the sensors to Homeassistant
 def setup_config():
-    mlha.publish_config("activator", "Activador simple", "binary_sensor", "running", None, None)
-    mlha.publish_config("mlactivator_connection", "MLActivator Connection", "binary_sensor", "connectivity", None, None)
+    mlha.publish_config("activator", "Activador simple", "binary_sensor", "running", expire_after = 140)
+    mlha.publish_config("mlactivator_connection", "MLActivator Connection", "binary_sensor", "connectivity", expire_after = 140)
 
 def button_pressed(pin):
     push_button.irq(trigger=Pin.IRQ_RISING, handler=None)
@@ -80,6 +80,8 @@ def button_pressed(pin):
 # Initialize main component (WiFi, MQTT and HomeAssistant)
 mlha = MLHA(wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password)
 mlha.set_callback(msg_received)
+mlha.set_device_name("MLCasaAlarmControl")
+mlha.set_enable_temp_sensor(True)
 
 # Initialise push button and its interrupt
 print("Initializing push button")
@@ -111,9 +113,13 @@ print("Ready to send/receive data")
 mlha.publish("system/status", "online", retain=True)
 
 # Main loop
+last_update = time.ticks_ms()
 while True:
     try:
         mlha.check_mqtt_msg()
+        if time.ticks_diff(time.ticks_ms(), last_update) > 120000: # 2 minutes
+            last_update = time.ticks_ms()
+            mlha.update_temp_sensor()
         time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))

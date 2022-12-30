@@ -1,7 +1,7 @@
 #
 # Custom library made to reuse code for all my devices that connect to Home Assistant
 #
-# This library doest the following:
+# This library does the following:
 #
 # 1. Connect to a WiFi network
 # 2. Connect to an MQTT broker
@@ -17,7 +17,7 @@ import ubinascii
 import network
 from umqtt.robust2 import MQTTClient
 import machine
-from machine import Timer, Pin
+from machine import Timer, Pin, ADC
 import time
 
 class MLHA:
@@ -35,13 +35,18 @@ class MLHA:
         self.wlan = network.WLAN(network.STA_IF)
         self.mqtt = MQTTClient(self.pico_id, mqtt_server, mqtt_port, mqtt_user, mqtt_password, keepalive=mqtt_keepalive)
 
+        self.device_name = "ML HA Generic Device"
+        self.enable_temp_sensor = False
+        self.temp_sensor = False
+        self.last_temp = 0
+
         self.mqtt_callback = None
         self.error_count = 0 # Used to keep track of the number of errors in case of a network failure
         # While the following bug is being worked on https://github.com/micropython/micropython/issues/9505, error_count is used to work around the issue
 
         # Start Initialization
         print(self.pico_id)
-        print("ML HA v0.1")
+        print("ML HA v0.2")
 
         # Check if LED works
         print("Checking LED for 5 seconds")
@@ -135,12 +140,29 @@ class MLHA:
     def publish(self, topic, msg, retain=False):
         self.mqtt.publish(b""+self.pico_id + "/" + topic, msg, retain)
 
+    def set_device_name(self, name):
+        self.device_name = name
+    
+    def set_enable_temp_sensor(self, bool):
+        self.enable_temp_sensor = bool
+    
+    def update_temp_sensor(self):
+        if self.enable_temp_sensor:
+            if not self.temp_sensor:
+                self.temp_sensor = machine.ADC(4)
+                self.publish_config(self.device_name + "_temperature", self.device_name + " Temperature", device_class="temperature", unit_of_measurement="C", state_class="measurement", state_topic="/"+self.device_name + "_temperature", expire_after=300)
+            temp_voltage = self.temp_sensor.read_u16() * (3.3 / 65535)
+            temp_celsius = round((27 - (temp_voltage - 0.706) / 0.001721), 2)
+            if self.last_temp != temp_celsius:
+                self.last_temp = temp_celsius
+                self.publish(self.device_name + "_temperature" + "/state", str(temp_celsius))
+
     # Discovery packet for Homeassistant
-    def publish_config(self, discovery_topic, name, device_type="sensor", device_class=None, unit_of_measurement=None, state_class=None):
+    def publish_config(self, discovery_topic, name, device_type="sensor", device_class=None, unit_of_measurement=None, state_class=None, state_topic="", expire_after=60):
         print("Publishing discovery packet for " + name)
         config_payload = {
             "name": name,
-            "state_topic": self.pico_id + "/state",
+            "state_topic": self.pico_id + state_topic + "/state",
             "availability": [
                 {
                     "topic": self.pico_id + "/system/status",
@@ -150,10 +172,10 @@ class MLHA:
             ],
             "device": {
                 "identifiers": self.pico_id,
-                "name": "MLCasaTemp",
+                "name": self.device_name,
                 "manufacturer": "MakerLab",
                 "model": "RPI Pico W MLHA",
-                "sw_version": "0.1",
+                "sw_version": "0.2",
                 "connections": [ ["ip", self.wlan.ifconfig()[0]], ["mac", ubinascii.hexlify(self.wlan.config('mac')).decode()] ]
             },
             "unique_id": self.pico_id + "-" + discovery_topic,
@@ -161,8 +183,11 @@ class MLHA:
             "value_template": "{{ value_json." + discovery_topic + " }}",
             "unit_of_measurement": unit_of_measurement,
             "state_class": state_class,
-            "expire_after": 60
+            "expire_after": expire_after
         }
+
+        if state_topic != "":
+            del config_payload["value_template"]
 
         if device_class is None:
             del config_payload["device_class"]
