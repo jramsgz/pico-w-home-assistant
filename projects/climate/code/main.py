@@ -13,30 +13,24 @@
 # 4. Sets up the MQTT publishing of the temperature and the status of the relays.
 # 6. Sets up a timer to read the temperature from the sensors and publish it to MQTT.
 #
-# Notes on changing the code:
-# - When the program is running, the on-board LED of the Pico board is lit. If 
-#   you are using a UI like the recommended Thonny, you can simply halt the 
-#   program when LED is on and update the program.
-#
-#     -- Jesús Ramos, 01-Dec-2022
-#
 
 import json
 from secrets import wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password
-from mlha import MLHA 
+from makerlab.mlha import MLHA 
 from machine import Pin, Timer
 import onewire, ds18x20
 import time
 import gc
 
 # Pins definition ===================================
-ds_caldera_pin = 16 # GPIO pin for caldera temperature data
-ds_deposito_pin = 17 # GPIO pin for deposito temperature data
-ds_casa_pin = 18 # GPIO pin for casa temperature data
-ds_exterior_pin = 19 # GPIO pin for exterior temperature data
-relay_caldera_pin = 20 # GPIO pin for caldera relay
-relay_acs_pin = 21 # GPIO pin for ACS relay
-relay_primerod_pin = 22 # GPIO pin for primerod relay
+ds_caldera_pin = 26 # GPIO pin for caldera temperature data
+ds_deposito_pin = 25 # GPIO pin for deposito temperature data
+ds_casa_pin = 24 # GPIO pin for casa temperature data
+ds_exterior_pin = 23 # GPIO pin for exterior temperature data
+relay_caldera_pin = 15 # GPIO pin for caldera relay
+relay_acs_pin = 14 # GPIO pin for ACS relay
+relay_primerod_pin = 13 # GPIO pin for primerod relay
+pir_pin = 18 # GPIO pin for the PIR sensor
 
 ds_caldera_sensor = None  # caldera temperature sensor object (Dallas)
 ds_deposito_sensor = None # depositotemperature sensor object (Dallas)
@@ -148,6 +142,7 @@ def setup_config():
 # Main =============================================
 # Initialize main component (WiFi, MQTT and HomeAssistant)
 mlha = MLHA(wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password)
+mlha.set_callback(msg_received)
 mlha.set_device_name("MLCasaClimate")
 mlha.set_enable_temp_sensor(True)
 
@@ -187,10 +182,14 @@ print("Ready to send/receive data")
 mlha.publish("system/status", "online", retain=True)
 
 # Main loop
+last_update = time.ticks_ms()
 while True:
     try:
         mlha.check_mqtt_msg()
-        time.sleep_ms(500)
+        if time.ticks_diff(time.ticks_ms(), last_update) > 120000: # 2 minutes
+            last_update = time.ticks_ms()
+            mlha.update_temp_sensor()
+        time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))
         machine.reset()
