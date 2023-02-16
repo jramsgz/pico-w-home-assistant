@@ -1,8 +1,5 @@
 # Raspberry Pi Pico W MQTT devices for HomeAssistant
 
-> **Note**
-> This is a work in progress. A documentation for the library will be added soon after I finish the first version of the library.
-
 This repo contains the makerlab.mlha library and projects that make use of it.
 
 ## Library
@@ -14,9 +11,26 @@ In order to use the library you need to have a MQTT broker running. I use [mosqu
 If you have everything set up, you just need to copy the library to your Pico W and import it in your project. The library is not yet available on PyPi so you need to copy it manually to your Pico W. You can do this by cloning the repo and then copying the library(/lib) folder to your Pico W. I personally use Thonny to copy the files to my Pico W.
 Then you can import the library in your project. For example:
 ```python
-import makerlab.mlha as mlha
+from makerlab.mlha import MLHA 
+
+mlha = MLHA(wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password)
 ```
-Instructions on how to use the library will be added soon.
+
+### Library usage
+Here is a table with the available functions and their parameters.
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `MLHA` | `wifi_SSID`, `wifi_password`, `mqtt_server`, `mqtt_port` (1883), `mqtt_user` (None), `mqtt_password` (None), `mqtt_keepalive` (1800) | Constructor. It connects to your WIFI, MQTT server and setups a watchdog to maintain the connection to the MQTT server |
+| `set_callback` | `callback` | Sets the callback function that will be called when a MQTT message is received. The callback function must have the following signature: `callback(topic, message, retained, duplicate)` |
+| `subscribe` | `topic`, `absolute` (False) | Subscribes to a MQTT topic. The topic must be a string. |
+| `publish` | `topic`, `message`, `retain` (False) | Publishes a MQTT message to a topic. The topic must be a string. |
+| `set_device_name` | `name` | Sets the name of the device. The name must be a string. |
+| `set_enable_temp_sensor` | `enable` | Enables or disables the temperature sensor. |
+| `update_temp_sensor` | None | Updates the temperature sensor. |
+| `publish_config` | `discovery_topic`, `name`, `device_type` ("sensor"), `device_class` (None), `unit_of_measurement` (None), `state_class` (None), `state_topic` (""), `expire_after` (60) | Publishes the config for the device to HomeAssistant. Read HomeAssistant documentation for available options. |
+| `publish_status` | `status` | Publishes the status all devices. The status must be a JSON object containing the discovery topic and the status. |
+| `check_mqtt_msg` | None | Checks if there are any MQTT messages to process. This function must be called periodically. |
 
 ## Projects
 
@@ -31,3 +45,7 @@ It consists of a Raspberry Pi Pico W (of course), x4 DS18B20 temperature sensors
 ### Alarm Control
 
 The alarm control device is a simple button that can be used to arm and disarm the alarm system. It also has a LED that indicates the state of the alarm system. The code for this project can be found in the projects/alarm_control folder.
+
+## Other Open Source projects
+
+Take a look at [PicoW HomeAssistant Starter](https://github.com/daniloc/PicoW_HomeAssistant_Starter) by [daniloc](https://github.com/daniloc) for a similar functionality with more mature code and features. It is developed using a port of the RP2040 to the Arduino ecosystem which might produce a smaller binary size.

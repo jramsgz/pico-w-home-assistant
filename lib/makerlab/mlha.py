@@ -1,17 +1,3 @@
-#
-# Custom library made to reuse code for all my devices that connect to Home Assistant
-#
-# This library does the following:
-#
-# 1. Connect to a WiFi network
-# 2. Connect to an MQTT broker
-# 3. Send configuration data to the broker for home assistant
-# 4. Subscribe to topics
-# 5. Publish data to the broker
-#
-#   -- Jesús Ramos, 30-Nov-2022
-#
-
 import json
 import ubinascii
 import network
