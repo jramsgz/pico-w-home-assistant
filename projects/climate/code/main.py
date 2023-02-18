@@ -24,12 +24,13 @@ import gc
 
 # Pins definition ===================================
 ds_caldera_pin = 26 # GPIO pin for caldera temperature data
-ds_deposito_pin = 25 # GPIO pin for deposito temperature data
-ds_casa_pin = 24 # GPIO pin for casa temperature data
-ds_exterior_pin = 23 # GPIO pin for exterior temperature data
-relay_caldera_pin = 15 # GPIO pin for caldera relay
-relay_acs_pin = 14 # GPIO pin for ACS relay
-relay_primerod_pin = 13 # GPIO pin for primerod relay
+ds_deposito_pin = 22 # GPIO pin for deposito temperature data
+ds_casa_pin = 21 # GPIO pin for casa temperature data
+ds_exterior_pin = 20 # GPIO pin for exterior temperature data
+relay_caldera_pin = 13 # GPIO pin for caldera relay
+relay_acs_pin = 9 # GPIO pin for ACS relay
+relay_primerod_pin = 10 # GPIO pin for primerod relay
+relay_garaje_pin = 15 # GPIO pin for primerod relay
 pir_pin = 18 # GPIO pin for the PIR sensor
 
 ds_caldera_sensor = None  # caldera temperature sensor object (Dallas)
@@ -43,6 +44,7 @@ temperatura_caldera = None # temperatura caldera
 temperatura_deposito = None # temperatura deposito
 temperatura_casa = None # temperatura casa
 temperatura_exterior = None # temperatura exterior
+pir_sensor = None # PIR sensor object
 mlha = None # WiFi, MQTT and HomeAssistant library
 
 # Functions =========================================
@@ -54,37 +56,39 @@ def getTemperature():
     try:
         caldera_sensor_id = ds_caldera_sensor.scan()[0]
         ds_caldera_sensor.convert_temp()
+        temperatura_caldera = ds_caldera_sensor.read_temp(caldera_sensor_id)
     except Exception as e:
         print("Error getting caldera temperature: " + str(e))
     try:
         deposito_sensor_id = ds_deposito_sensor.scan()[0]
         ds_deposito_sensor.convert_temp()
+        temperatura_deposito = ds_deposito_sensor.read_temp(deposito_sensor_id)
     except Exception as e:
         print("Error getting deposito temperature: " + str(e))
     try:
         casa_sensor_id = ds_casa_sensor.scan()[0]
         ds_casa_sensor.convert_temp()
+        temperatura_casa = ds_casa_sensor.read_temp(casa_sensor_id)
     except Exception as e:
         print("Error getting casa temperature: " + str(e))
     try:
         exterior_sensor_id = ds_exterior_sensor.scan()[0]
         ds_exterior_sensor.convert_temp()
+        temperatura_exterior = ds_exterior_sensor.read_temp(exterior_sensor_id)
     except Exception as e:
         print("Error getting exterior temperature: " + str(e))
+    
+    # Check temperature values are valid
+    if temperatura_caldera < 0 or temperatura_caldera > 84:
+        temperatura_caldera = None
+    if temperatura_deposito < 0 or temperatura_deposito > 84:
+        temperatura_deposito = None
+    if temperatura_casa < 0 or temperatura_casa > 50:
+        temperatura_casa = None
+    if temperatura_exterior < -20 or temperatura_exterior > 60:
+        temperatura_exterior = None
 
         time.sleep_ms(500)
-
-    try:
-        if 'caldera_sensor_id' in locals():
-            temperatura_caldera = ds_caldera_sensor.read_temp(caldera_sensor_id)
-        if 'deposito_sensor_id' in locals():
-            temperatura_deposito = ds_deposito_sensor.read_temp(deposito_sensor_id)
-        if 'casa_sensor_id' in locals():
-            temperatura_casa = ds_casa_sensor.read_temp(casa_sensor_id)
-        if 'exterior_sensor_id' in locals():
-            temperatura_exterior = ds_exterior_sensor.read_temp(exterior_sensor_id)
-    except Exception as e:
-        print("Error getting temperature: " + str(e))
 
 def msg_received(topic, msg, retained, duplicate):
     if topic == "system/status":
@@ -106,9 +110,7 @@ def msg_received(topic, msg, retained, duplicate):
             relay_primerod.value(1)
     else:
         print("Unknown topic")
-    extracted_data = parse_message()
-    stringified_data = json.dumps(extracted_data)
-    mlha.publish("state", stringified_data)
+    mlha.publish_status(parse_message())
 
 def parse_message():
     extracted_data = {"caldera_temp": temperatura_caldera,
@@ -123,7 +125,7 @@ def parse_message():
     return extracted_data
 
 
-def read_and_publish(timer):
+def read_and_publish():
     getTemperature()
     mlha.publish_status(parse_message())
 
@@ -136,6 +138,7 @@ def setup_config():
     mlha.publish_config("caldera_status", "Estado de la caldera", "switch", expire_after = 60)
     mlha.publish_config("acs_status", "Estado del ACS", "switch", expire_after = 60)
     mlha.publish_config("primerod_status", "Estado del Primero D", "switch", expire_after = 60)
+    mlha.publish_config("cuadra_motion", "Movimiento en la cuadra", "binary_sensor", "motion", state_topic = "motion", expire_after = 60)
     mlha.publish_config("mltemp_connection", "MLTemp Connection", "binary_sensor", "connectivity", expire_after = 60)
 
 # Main =============================================
@@ -160,6 +163,10 @@ relay_caldera.value(1)
 relay_acs.value(1)
 relay_primerod.value(1)
 
+# Initialize PIR sensor
+print("Initializing PIR sensor")
+pir_sensor = Pin(pir_pin, Pin.IN)
+
 # Subscribe to topics
 print("New session being set up")
 mlha.subscribe("switch/toggle/caldera_status")
@@ -178,6 +185,7 @@ mlha.publish("system/status", "online", retain=True)
 
 # Main loop
 last_update = time.ticks_ms()
+last_pir_value = 2 # Force first check and publish
 while True:
     try:
         mlha.check_mqtt_msg()
@@ -185,6 +193,15 @@ while True:
         if time.ticks_diff(time.ticks_ms(), last_update) > 30000: # 30 seconds
             last_update = time.ticks_ms()
             read_and_publish()
+        # Check PIR sensor
+        if pir_sensor.value() != last_pir_value:
+            last_pir_value = pir_sensor.value()
+            if last_pir_value == 1:
+                print("Motion detected")
+                mlha.publish("motion", "True")
+            else:
+                print("Motion stopped")
+                mlha.publish("motion", "False")
         time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))
