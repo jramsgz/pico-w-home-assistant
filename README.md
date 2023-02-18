@@ -34,6 +34,9 @@ Here is a table with the available functions and their parameters.
 
 ## Projects
 
+Here is a list of my own projects that make use of the library.
+Currently there are 2 projects, one for the climate control (reads temperatures and turns on/off the heater) and one for the alarm control (a simple button that can be used to arm and disarm the alarm system).
+
 ### Climate
 
 The climate project is the way I control my heating system in my house. Schematics and code can be found in the projects/climate folder.
@@ -45,7 +48,8 @@ It consists of a Raspberry Pi Pico W (of course), x4 DS18B20 temperature sensors
 ### Alarm Control
 
 The alarm control device is a simple button that can be used to arm and disarm the alarm system. It also has a LED that indicates the state of the alarm system. The code for this project can be found in the projects/alarm_control folder.
+The alarm system I am using is just Home Assistant with Alarmo installed.
 
 ## Other Open Source projects
 
-Take a look at [PicoW HomeAssistant Starter](https://github.com/daniloc/PicoW_HomeAssistant_Starter) by [daniloc](https://github.com/daniloc) for a similar functionality with more mature code and features. It is developed using a port of the RP2040 to the Arduino ecosystem which might produce a smaller binary size.
+Take a look at [PicoW HomeAssistant Starter](https://github.com/daniloc/PicoW_HomeAssistant_Starter) by [daniloc](https://github.com/daniloc) for a similar functionality but made in C/C++. It is developed using a port of the RP2040 to the Arduino ecosystem which might produce a smaller binary size.
