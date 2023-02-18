@@ -124,7 +124,6 @@ def parse_message():
 
 
 def read_and_publish(timer):
-    mlha.update_temp_sensor()
     getTemperature()
     mlha.publish_status(parse_message())
 
@@ -144,7 +143,6 @@ def setup_config():
 mlha = MLHA(wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password)
 mlha.set_callback(msg_received)
 mlha.set_device_name("MLCasaClimate")
-mlha.set_enable_temp_sensor(True)
 
 # Initialise temperature sensors
 print("Initializing temperature sensors")
@@ -174,9 +172,6 @@ print("Publishing config to Homeassistant")
 setup_config() # Publishes the config for Homeassistant
 
 print("Starting values read and publish timer")
-# Send data to broker every 30 seconds
-send_tim = Timer()
-send_tim.init(period=30000, mode=Timer.PERIODIC, callback=read_and_publish)
 print("Initialization complete, free memory: " + str(gc.mem_free()))
 print("Ready to send/receive data")
 mlha.publish("system/status", "online", retain=True)
@@ -186,9 +181,10 @@ last_update = time.ticks_ms()
 while True:
     try:
         mlha.check_mqtt_msg()
-        if time.ticks_diff(time.ticks_ms(), last_update) > 120000: # 2 minutes
+        # Send data to broker every 30 seconds
+        if time.ticks_diff(time.ticks_ms(), last_update) > 30000: # 30 seconds
             last_update = time.ticks_ms()
-            mlha.update_temp_sensor()
+            read_and_publish()
         time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))
