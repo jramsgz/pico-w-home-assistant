@@ -42,7 +42,6 @@ Currently there are 2 projects, one for the climate control (reads temperatures 
 The climate project is the way I control my heating system in my house. Schematics and code can be found in the projects/climate folder.
 It consists of a Raspberry Pi Pico W (of course), x4 DS18B20 temperature sensors, a 8 channel relay board and a PIR module (the PIR is used as a part of the alarm system) which is synced and controlled via HomeAssistant using MQTT.
 
-*Note: This is a temporary placeholder screenshot. Needs replacement*
 ![Climate device in HomeAssistant](/projects/climate/screenshots/mqtt_ha.png)
 
 ### Alarm Control
