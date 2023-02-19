@@ -103,7 +103,7 @@ class MLHA:
         # Option, limits the possibility of only one unique message being queued.
         self.mqtt.NO_QUEUE_DUPS = True
         # Limit the number of unsent messages in the queue.
-        self.mqtt.MSG_QUEUE_MAX = 2
+        self.mqtt.MSG_QUEUE_MAX = 5
         # Sets the callback function for the MQTTClient object.
         self.mqtt.set_callback(self.sub_cb)
 
@@ -185,7 +185,7 @@ class MLHA:
         if device_type == "binary_sensor":
             config_payload["payload_on"] = True
             config_payload["payload_off"] = False
-            if device_class is "connectivity":
+            if device_class == "connectivity":
                 config_payload["entity_category"] = "diagnostic"
 
         if device_type == "switch":
