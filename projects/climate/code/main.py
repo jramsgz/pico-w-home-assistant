@@ -17,7 +17,7 @@
 import json
 from secrets import wifi_SSID, wifi_password, mqtt_server, mqtt_port, mqtt_user, mqtt_password
 from makerlab.mlha import MLHA 
-from machine import Pin, Timer
+from machine import Pin
 import onewire, ds18x20
 import time
 import gc
@@ -88,8 +88,6 @@ def getTemperature():
     if temperatura_exterior < -20 or temperatura_exterior > 60:
         temperatura_exterior = None
 
-        time.sleep_ms(500)
-
 def msg_received(topic, msg, retained, duplicate):
     if topic == "system/status":
         mlha.publish("system/status", "online")
@@ -138,7 +136,7 @@ def setup_config():
     mlha.publish_config("caldera_status", "Estado de la caldera", "switch", expire_after = 60)
     mlha.publish_config("acs_status", "Estado del ACS", "switch", expire_after = 60)
     mlha.publish_config("primerod_status", "Estado del Primero D", "switch", expire_after = 60)
-    mlha.publish_config("cuadra_motion", "Movimiento en la cuadra", "binary_sensor", "motion", state_topic = "motion", expire_after = 60)
+    mlha.publish_config("cuadra_motion", "Movimiento en la cuadra", "binary_sensor", "motion", state_topic = "/motion", expire_after = 60)
     mlha.publish_config("mltemp_connection", "MLTemp Connection", "binary_sensor", "connectivity", expire_after = 60)
 
 # Main =============================================
@@ -184,24 +182,24 @@ print("Ready to send/receive data")
 mlha.publish("system/status", "online", retain=True)
 
 # Main loop
-last_update = time.ticks_ms()
+last_update = 0
 last_pir_value = 2 # Force first check and publish
 while True:
     try:
         mlha.check_mqtt_msg()
+        # Check PIR sensor
+        if pir_sensor.value() != last_pir_value or time.ticks_diff(time.ticks_ms(), last_update) > 30000:
+            last_pir_value = pir_sensor.value()
+            if last_pir_value == 1:
+                print("Motion detected")
+                mlha.publish("motion/state", "True")
+            else:
+                print("Motion stopped")
+                mlha.publish("motion/state", "False")
         # Send data to broker every 30 seconds
         if time.ticks_diff(time.ticks_ms(), last_update) > 30000: # 30 seconds
             last_update = time.ticks_ms()
             read_and_publish()
-        # Check PIR sensor
-        if pir_sensor.value() != last_pir_value:
-            last_pir_value = pir_sensor.value()
-            if last_pir_value == 1:
-                print("Motion detected")
-                mlha.publish("motion", "True")
-            else:
-                print("Motion stopped")
-                mlha.publish("motion", "False")
         time.sleep_ms(250)
     except Exception as ex:
         print("error: " + str(ex))
