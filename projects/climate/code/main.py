@@ -30,7 +30,7 @@ ds_exterior_pin = 20 # GPIO pin for exterior temperature data
 relay_caldera_pin = 13 # GPIO pin for caldera relay
 relay_acs_pin = 9 # GPIO pin for ACS relay
 relay_primerod_pin = 10 # GPIO pin for primerod relay
-relay_garaje_pin = 15 # GPIO pin for primerod relay
+relay_garaje_pin = 15 # GPIO pin for garaje relay
 pir_pin = 18 # GPIO pin for the PIR sensor
 
 ds_caldera_sensor = None  # caldera temperature sensor object (Dallas)
@@ -40,6 +40,7 @@ ds_exterior_sensor = None # exterior temperature sensor object (Dallas)
 relay_caldera = None # relay for caldera
 relay_acs = None # relay for acs
 relay_primerod = None # relay for primerod
+relay_garaje = None # relay for garaje
 temperatura_caldera = None # temperatura caldera
 temperatura_deposito = None # temperatura deposito
 temperatura_casa = None # temperatura casa
@@ -106,6 +107,11 @@ def msg_received(topic, msg, retained, duplicate):
             relay_primerod.value(0)
         elif msg == b"False":
             relay_primerod.value(1)
+    elif topic == "switch/toggle/garaje_status":
+        if msg == b"True":
+            relay_garaje.value(0)
+        elif msg == b"False":
+            relay_garaje.value(1)
     else:
         print("Unknown topic")
     mlha.publish_status(parse_message())
@@ -118,6 +124,7 @@ def parse_message():
                       "caldera_status": relay_caldera.value() == 0,
                       "acs_status": relay_acs.value() == 0,
                       "primerod_status": relay_primerod.value() == 0,
+                      "garaje_status": relay_garaje.value() == 0,
                       "mltemp_connection": True}
 
     return extracted_data
@@ -136,6 +143,7 @@ def setup_config():
     mlha.publish_config("caldera_status", "Estado de la caldera", "switch", expire_after = 60)
     mlha.publish_config("acs_status", "Estado del ACS", "switch", expire_after = 60)
     mlha.publish_config("primerod_status", "Estado del Primero D", "switch", expire_after = 60)
+    mlha.publish_config("garaje_status", "Estado del Garaje", "switch", expire_after = 60)
     mlha.publish_config("cuadra_motion", "Movimiento en la cuadra", "binary_sensor", "motion", state_topic = "/motion", expire_after = 60)
     mlha.publish_config("mltemp_connection", "MLTemp Connection", "binary_sensor", "connectivity", expire_after = 60)
 
@@ -157,9 +165,11 @@ print("Initializing relays")
 relay_caldera = Pin(relay_caldera_pin, Pin.OUT)
 relay_acs = Pin(relay_acs_pin, Pin.OUT)
 relay_primerod = Pin(relay_primerod_pin, Pin.OUT)
+relay_garaje = Pin(relay_garaje_pin, Pin.OUT)
 relay_caldera.value(1)
 relay_acs.value(1)
 relay_primerod.value(1)
+relay_garaje.value(1)
 
 # Initialize PIR sensor
 print("Initializing PIR sensor")
@@ -170,6 +180,7 @@ print("New session being set up")
 mlha.subscribe("switch/toggle/caldera_status")
 mlha.subscribe("switch/toggle/acs_status")
 mlha.subscribe("switch/toggle/primerod_status")
+mlha.subscribe("switch/toggle/garaje_status")
 print("Connected to MQTT broker and subscribed to topics")
 
 # Publish config for sensors
