@@ -91,12 +91,12 @@ def getTemperature():
     if temperatura_caldera is not None:
         if temperatura_caldera == 85.0:
             temperatura_caldera = None
-        if temperatura_caldera < 0 or temperatura_caldera > 100:
+        elif temperatura_caldera < 0 or temperatura_caldera > 100:
             temperatura_caldera = None
     if temperatura_deposito is not None:
         if temperatura_deposito == 85.0:
             temperatura_deposito = None
-        if temperatura_deposito < 0 or temperatura_deposito > 90:
+        elif temperatura_deposito < 0 or temperatura_deposito > 90:
             temperatura_deposito = None
     if temperatura_casa is not None:
         if temperatura_casa < -10 or temperatura_casa > 60:
